@@ -6,13 +6,10 @@ import (
 	"fmt"
 	"github.com/Syfaro/telegram-bot-api"
 	"github.com/go-redis/redis"
-	"github.com/kshvakov/clickhouse"
 	"log"
 	"os"
 	"regexp"
 	"telega/model"
-	//	"time"
-	//	"bytes"
 	"strconv"
 )
 
@@ -20,8 +17,10 @@ import (
 var (
 	telegramBotToken string
 	dbRedis          *redis.Client
-	dbClick          *sql.DB
 )
+
+
+
 
 func init() {
 	flag.StringVar(&telegramBotToken, "telegrambottoken", "", "Telegram Bot Token")
@@ -32,7 +31,6 @@ func init() {
 		os.Exit(1)
 	}
 	dbRedis = model.NewRedis()
-	dbClick = model.NewClick()
 }
 
 func main() {
@@ -57,7 +55,7 @@ func main() {
 
 		log.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
 
-		m := update.Message.Command()
+		m := update.Message.Text
 		switch {
 		case m == "help":
 			reply = "/list - показ всех машин, о которых есть информация" +
@@ -74,9 +72,11 @@ func main() {
 			}
 			reply = fmt.Sprint(key)
 		case m == "count":
-			count, err := model.СountQuery(dbClick)
+			count, err := model.СountQuery()
 			if err != nil {
-				reply = "Ошибка"
+				log.Println(err)
+				reply = "ошибка"
+				break
 			}
 			reply = strconv.Itoa(count)
 		case id.MatchString(m):
@@ -97,11 +97,12 @@ func main() {
 			if ip == "<nil>" {
 				reply = "Нет такой машины"
 			} else {
-				reply = fmt.Sprint("<b>ip: </b>", ip, "; user agent: ", user)
+				reply = fmt.Sprintf("*ip:* _%v_ * user agent: *_%v_", ip, user)
 			}
 		}
 
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, reply)
+		msg.ParseMode = "markdown"
 		bot.Send(msg)
 	}
 }

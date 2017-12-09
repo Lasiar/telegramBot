@@ -6,11 +6,17 @@ import (
 	"github.com/go-redis/redis"
 	"github.com/kshvakov/clickhouse"
 	"log"
+	"net/http"
+	"io/ioutil"
+	"encoding/json"
 )
 
-const dbcountQuery = `select count(distinct point_id) from stat.statistics where created = toDate(today())`
+	const dbcountQuery = `select count(distinct point_id) from stat.statistics where created = toDate(today())`
 
 
+type  PointCount struct {
+	Count int
+}
 func NewRedis() *redis.Client {
 	db := redis.NewClient(&redis.Options{
 		Addr:     "127.0.0.1:6379",
@@ -24,44 +30,22 @@ func NewRedis() *redis.Client {
 	return db
 }
 
-func NewClick() *sql.DB {
-	db, err := sql.Open("clickhouse", "tcp://192.168.0.145:9000?database=stat&read_timeout=10&write_timeout=20")
-	if err != nil {
-		log.Fatal(err)
-	}
-	if err := db.Ping(); err != nil {
-		if exception, ok := err.(*clickhouse.Exception); ok {
-			fmt.Printf("[%d] %s \n%s\n", exception.Code, exception.Message, exception.StackTrace)
-		} else {
-			fmt.Println(err)
-		}
-	}
-	return db
-}
 
-func СountQuery(db *sql.DB) (int, error) {
-	var count int
-	if err := db.Ping(); err != nil {
-		if exception, ok := err.(*clickhouse.Exception); ok {
-			fmt.Printf("[%d] %s \n%s\n", exception.Code, exception.Message, exception.StackTrace)
-		} else {
-			return 0, fmt.Errorf("Error connect to GoodClick: %v", err)
-		}
+func СountQuery() (int, error) {
+	var pointCount PointCount
+	res, err := http.Get("http://127.0.0.1:8080/gateway/statistics/all")
+	if err != nil {
+		fmt.Println("Error get to api",err)
 	}
-	rows, err := db.Query(dbcountQuery)
+	count, err := ioutil.ReadAll(res.Body)
+	res.Body.Close()
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer rows.Close()
-	for rows.Next() {
-		err := rows.Scan(&count)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-	err = rows.Err()
+	fmt.Println(count)
+	err = json.Unmarshal([]byte(count), &pointCount)
 	if err != nil {
-		log.Fatal(err)
+		return 0, fmt.Errorf("error unmarshal", err)
 	}
-	return count, nil
+	return pointCount.Count, nil
 }
