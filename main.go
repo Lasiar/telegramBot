@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"flag"
 	"fmt"
 	"github.com/Syfaro/telegram-bot-api"
@@ -9,18 +8,15 @@ import (
 	"log"
 	"os"
 	"regexp"
-	"telega/model"
 	"strconv"
+	"telega/model"
+	//	"github.com/prometheus/common/version"
 )
-
 
 var (
 	telegramBotToken string
 	dbRedis          *redis.Client
 )
-
-
-
 
 func init() {
 	flag.StringVar(&telegramBotToken, "telegrambottoken", "", "Telegram Bot Token")
@@ -57,19 +53,8 @@ func main() {
 
 		m := update.Message.Text
 		switch {
-		case m == "help":
-			reply = "/list - показ всех машин, о которых есть информация" +
-				"/$(id) - вывод информации по конкретной машине"
 		case m == "list":
-			key, err := dbRedis.Keys("*_ip*").Result()
-			if err != nil {
-				reply = fmt.Sprint(err)
-				break
-			}
-			if len(key) == 0 {
-				reply = "Нет машин.."
-				break
-			}
+			key, _ := model.List()
 			reply = fmt.Sprint(key)
 		case m == "count":
 			count, err := model.СountQuery()
@@ -80,27 +65,14 @@ func main() {
 			}
 			reply = strconv.Itoa(count)
 		case id.MatchString(m):
-			ip := m + "_ip"
-			user := m + "_user"
-			keysdb, err := dbRedis.MGet(ip, user).Result()
-			if err != nil {
-				reply = fmt.Sprint(err)
-			}
-			for i, mes := range keysdb {
-				switch i {
-				case 0:
-					ip = fmt.Sprint(mes)
-				case 1:
-					user = fmt.Sprint(mes)
-				}
-			}
-			if ip == "<nil>" {
-				reply = "Нет такой машины"
+			infoPoint, _ := model.InfoPoint(m)
+			fmt.Println(infoPoint.Success)
+			if infoPoint.Success {
+				reply = fmt.Sprintf("ip: *%v*; user info: *%v*", infoPoint.Ip, infoPoint.UserAgent)
 			} else {
-				reply = fmt.Sprintf("*ip:* _%v_ * user agent: *_%v_", ip, user)
+				reply = "такой машины нет"
 			}
 		}
-
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, reply)
 		msg.ParseMode = "markdown"
 		bot.Send(msg)
