@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/Syfaro/telegram-bot-api"
+	"gopkg.in/telegram-bot-api.v4"
 	"github.com/go-redis/redis"
 	"log"
 	"os"
@@ -66,7 +66,6 @@ func main() {
 			reply = strconv.Itoa(count)
 		case id.MatchString(m):
 			infoPoint, _ := model.InfoPoint(m)
-			fmt.Println(infoPoint.Success)
 			if infoPoint.Success {
 				reply = fmt.Sprintf("ip: *%v*; user info: *%v*", infoPoint.Ip, infoPoint.UserAgent)
 			} else {

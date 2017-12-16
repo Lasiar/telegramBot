@@ -9,7 +9,6 @@ import (
 	"net/http"
 )
 
-const dbcountQuery = `select count(distinct point_id) from stat.statistics where created = toDate(today())`
 
 type InfoPointJs struct {
 	Ip        string `json:"ip"`
@@ -52,7 +51,7 @@ func List() ([]int, error) {
 	fmt.Println(pointArr)
 	err = json.Unmarshal([]byte(pointArr), &point)
 	if err != nil {
-		return nil, fmt.Errorf("error unmarshal", err)
+		return nil, fmt.Errorf("error unmarshal %v", err)
 	}
 	return point.Point, nil
 }
@@ -61,7 +60,7 @@ func List() ([]int, error) {
 
 func InfoPoint(point string) (InfoPointJs, error) {
 	var infoPointJs InfoPointJs
-	url := fmt.Sprint("http://127.0.0.1:8080/gateway/statistics/info-point?point=", point)
+	url := fmt.Sprint("http://127.0.0.1:8080/gateway/telegram/info-point?point=", point)
 	res, err := http.Get(url)
 	if err != nil {
 		fmt.Println("Error get to api", err)
@@ -80,7 +79,7 @@ func InfoPoint(point string) (InfoPointJs, error) {
 
 func СountQuery() (int, error) {
 	var pointCount PointCount
-	res, err := http.Get("http://127.0.0.1:8080/gateway/statistics/all")
+	res, err := http.Get("http://127.0.0.1:8080/gateway/telegram/count-point")
 	if err != nil {
 		fmt.Println("Error get to api", err)
 	}
@@ -92,7 +91,7 @@ func СountQuery() (int, error) {
 	fmt.Println(count)
 	err = json.Unmarshal([]byte(count), &pointCount)
 	if err != nil {
-		return 0, fmt.Errorf("error unmarshal", err)
+		return 0, fmt.Errorf("error unmarsha %v", err)
 	}
 	return pointCount.Count, nil
 }
