@@ -3,77 +3,48 @@ package main
 import (
 	"flag"
 	"fmt"
-	"gopkg.in/telegram-bot-api.v4"
-	"github.com/go-redis/redis"
 	"log"
 	"os"
-	"regexp"
-	"strconv"
-	"telega/model"
-	//	"github.com/prometheus/common/version"
+	"net/http"
+	"encoding/json"
+	"telega/lib"
+	"telega/telegram"
 )
 
-var (
-	telegramBotToken string
-	dbRedis          *redis.Client
-)
+
 
 func init() {
-	flag.StringVar(&telegramBotToken, "telegrambottoken", "", "Telegram Bot Token")
+	flag.StringVar(&lib.TelegramBotToken, "telegrambottoken", "", "Telegram Bot Token")
 	flag.Parse()
-
-	if telegramBotToken == "" {
+	if lib.TelegramBotToken == "" {
 		log.Print("-telegrambottoken is required")
 		os.Exit(1)
 	}
-	dbRedis = model.NewRedis()
 }
 
 func main() {
-	var id = regexp.MustCompile(`\d`)
-	bot, err := tgbotapi.NewBotAPI(telegramBotToken)
-	if err != nil {
-		log.Panic(err)
-	}
+	logs := make(chan string)
+	go telegram.MainTtelegram(logs)
+	handleHello := makeHello(logs)
+	http.HandleFunc("/listen", handleHello)
+	http.ListenAndServe(":8282", nil)
 
-	log.Printf("Authorized on account %s", bot.Self.UserName)
+}
 
-	u := tgbotapi.NewUpdate(0)
-	u.Timeout = 60
 
-	updates, err := bot.GetUpdatesChan(u)
-
-	for update := range updates {
-		reply := "Не знаю что сказать"
-		if update.Message == nil {
-			continue
+func makeHello(logger chan string) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, "all ok	")
+		decoder := json.NewDecoder(r.Body)
+		var t lib.Json
+		err := decoder.Decode(&t)
+		if err != nil {
+			panic(err)
 		}
+		string := fmt.Sprint("id: ", t.Point, "info: ", t.Statistics)
 
-		log.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
-
-		m := update.Message.Text
-		switch {
-		case m == "list":
-			key, _ := model.List()
-			reply = fmt.Sprint(key)
-		case m == "count":
-			count, err := model.СountQuery()
-			if err != nil {
-				log.Println(err)
-				reply = "ошибка"
-				break
-			}
-			reply = strconv.Itoa(count)
-		case id.MatchString(m):
-			infoPoint, _ := model.InfoPoint(m)
-			if infoPoint.Success {
-				reply = fmt.Sprintf("ip: *%v*; user info: *%v*", infoPoint.Ip, infoPoint.UserAgent)
-			} else {
-				reply = "такой машины нет"
-			}
-		}
-		msg := tgbotapi.NewMessage(update.Message.Chat.ID, reply)
-		msg.ParseMode = "markdown"
-		bot.Send(msg)
+		logger <- string
 	}
 }
+
+

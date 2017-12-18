@@ -3,43 +3,17 @@ package model
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/go-redis/redis"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"sort"
+	"telega/lib"
 )
 
 
-type InfoPointJs struct {
-	Ip        string `json:"ip"`
-	UserAgent string `json:"user_agent"`
-	Success   bool   `json:"success"`
-}
-
-type PointCount struct {
-	Count int `json:"count"`
-}
-
-type Point struct {
-	Point []int `json:"point"`
-}
-
-func NewRedis() *redis.Client {
-	db := redis.NewClient(&redis.Options{
-		Addr:     "127.0.0.1:6379",
-		Password: "", // no password set
-		DB:       0,  // use default DB
-	})
-	_, err := db.Ping().Result()
-	if err != nil {
-		log.Println(err)
-	}
-	return db
-}
-
 func List() ([]int, error) {
-	var point Point
-	res, err := http.Get("http://127.0.0.1:8080/gateway/statistics/list")
+	var point lib.Point
+	res, err := http.Get("http://127.0.0.1:8181/gateway/telegram/list-point")
 	if err != nil {
 		fmt.Println("Error get to api", err)
 	}
@@ -53,14 +27,15 @@ func List() ([]int, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error unmarshal %v", err)
 	}
+	sort.Ints(point.Point)
 	return point.Point, nil
 }
 
 
 
-func InfoPoint(point string) (InfoPointJs, error) {
-	var infoPointJs InfoPointJs
-	url := fmt.Sprint("http://127.0.0.1:8080/gateway/telegram/info-point?point=", point)
+func InfoPoint(point string) (lib.InfoPointJs, error) {
+	var infoPointJs lib.InfoPointJs
+	url := fmt.Sprint("http://127.0.0.1:8181/gateway/telegram/info-point?point=", point)
 	res, err := http.Get(url)
 	if err != nil {
 		fmt.Println("Error get to api", err)
@@ -77,9 +52,9 @@ func InfoPoint(point string) (InfoPointJs, error) {
 	return infoPointJs, nil
 }
 
-func СountQuery() (int, error) {
-	var pointCount PointCount
-	res, err := http.Get("http://127.0.0.1:8080/gateway/telegram/count-point")
+func CountAllQuery() (int, error) {
+	var pointCount lib.PointCount
+	res, err := http.Get("http://127.0.0.1:8181/gateway/telegram/count-point")
 	if err != nil {
 		fmt.Println("Error get to api", err)
 	}
@@ -88,10 +63,28 @@ func СountQuery() (int, error) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(count)
-	err = json.Unmarshal([]byte(count), &pointCount)
+	err = json.Unmarshal(count, &pointCount)
 	if err != nil {
 		return 0, fmt.Errorf("error unmarsha %v", err)
 	}
 	return pointCount.Count, nil
+}
+
+func CountToDayQuery() ([]int, error) {
+	var pointToDayCount lib.Point
+	res, err := http.Get("http://127.0.0.1:8181/gateway/telegram/list-point-today")
+	if err != nil {
+		fmt.Println("Error get to api", err)
+	}
+	count, err := ioutil.ReadAll(res.Body)
+	res.Body.Close()
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = json.Unmarshal(count, &pointToDayCount)
+	if err != nil {
+		return pointToDayCount.Point, fmt.Errorf("error unmarsha %v", err)
+	}
+	fmt.Println(pointToDayCount)
+	return pointToDayCount.Point, nil
 }
