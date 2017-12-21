@@ -9,6 +9,9 @@ import (
 	"encoding/json"
 	"telega/lib"
 	"telega/telegram"
+
+	"io/ioutil"
+	//"regexp"
 )
 
 
@@ -37,14 +40,18 @@ func makeHello(logger chan string) func(http.ResponseWriter, *http.Request) {
 		fmt.Fprint(w, "all ok	")
 		decoder := json.NewDecoder(r.Body)
 		var t lib.Json
+
 		err := decoder.Decode(&t)
 		if err != nil {
-			panic(err)
+			fmt.Println(ioutil.ReadAll(r.Body))
+			fmt.Fprint(w, "all ok	")
+			log.Println(err)
+			return
 		}
+		fmt.Println(t.Point)
 		string := fmt.Sprint("id: ", t.Point, "info: ", t.Statistics)
-
+		fmt.Println("Отправил в логгер")
 		logger <- string
 	}
 }
-
 

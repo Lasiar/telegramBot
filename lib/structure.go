@@ -1,5 +1,6 @@
 package lib
 
+
 type InfoPointJs struct {
 	Ip        string `json:"ip"`
 	UserAgent string `json:"user_agent"`
@@ -15,6 +16,6 @@ type Point struct {
 }
 
 type  Json struct {
-	Point int `json:"point"`
+	Point interface{} `json:"point"`
 	Statistics [][]interface{} `json:"statistics"`
 }

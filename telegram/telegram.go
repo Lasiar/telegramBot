@@ -35,14 +35,7 @@ func MainTtelegram(logs chan string) {
 		m := update.Message.Text
 		switch {
 		case m == "1":
-			for {
-				fmt.Println("Жду получения")
-				reply = <-logs
-				fmt.Println("Получил")
-				msg := tgbotapi.NewMessage(update.Message.Chat.ID, reply)
-				msg.ParseMode = "markdown"
-				bot.Send(msg)
-			}
+
 		case m == "list":
 			reply = ""
 			keys, _ := model.List()
@@ -64,12 +57,29 @@ func MainTtelegram(logs chan string) {
 				reply = reply + fmt.Sprint(key, "\n")
 			}
 		case id.MatchString(m):
-			infoPoint, _ := model.InfoPoint(m)
+			loop:
+			for {
+				select {
+					case u := <-updates:
+						if u.Message.Text == "exit" {
+							break loop
+						}
+					case reply := <-logs:
+						fmt.Println("Жду получения")
+						reply = <-logs
+						fmt.Println("Получил")
+						msg := tgbotapi.NewMessage(update.Message.Chat.ID, reply)
+						msg.ParseMode = "markdown"
+						bot.Send(msg)
+				}
+
+			}
+			/*infoPoint, _ := model.InfoPoint(m)
 			if infoPoint.Success {
 				reply = fmt.Sprintf("ip: *%v*; user info: *%v*", infoPoint.Ip, infoPoint.UserAgent)
 			} else {
 				reply = "такой машины нет"
-			}
+			} */
 		}
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, reply)
 		msg.ParseMode = "markdown"
