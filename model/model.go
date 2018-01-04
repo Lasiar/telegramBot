@@ -10,7 +10,6 @@ import (
 	"telega/lib"
 )
 
-
 func List() ([]int, error) {
 	var point lib.Point
 	res, err := http.Get("http://127.0.0.1:8181/gateway/telegram/list-point")
@@ -30,8 +29,6 @@ func List() ([]int, error) {
 	sort.Ints(point.Point)
 	return point.Point, nil
 }
-
-
 
 func InfoPoint(point string) (lib.InfoPointJs, error) {
 	var infoPointJs lib.InfoPointJs

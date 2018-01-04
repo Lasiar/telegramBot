@@ -50,8 +50,11 @@ func makeHello(logger chan string) func(http.ResponseWriter, *http.Request) {
 		}
 		fmt.Println(t.Point)
 		string := fmt.Sprint("id: ", t.Point, "info: ", t.Statistics)
-		fmt.Println("Отправил в логгер")
-		logger <- string
+		select {
+			case 	logger <- string:
+		default:
+			return
+		}
 	}
 }
 
