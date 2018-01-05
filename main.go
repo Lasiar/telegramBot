@@ -1,39 +1,47 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
-	"os"
 	"net/http"
-	"encoding/json"
+	"os"
 	"telega/lib"
 	"telega/telegram"
 
 	"io/ioutil"
 	//"regexp"
+	"gopkg.in/telegram-bot-api.v4"
 )
 
-
-
 func init() {
+	var err error
 	flag.StringVar(&lib.TelegramBotToken, "telegrambottoken", "", "Telegram Bot Token")
 	flag.Parse()
 	if lib.TelegramBotToken == "" {
 		log.Print("-telegrambottoken is required")
 		os.Exit(1)
 	}
+	telegram.Bot, err = tgbotapi.NewBotAPI(lib.TelegramBotToken)
+	if err != nil {
+		log.Panic("ошибка подключения бота", err)
+	}
+	log.Println("Connect", telegram.Bot.Self.UserName)
 }
 
 func main() {
 	logs := make(chan string)
-	go telegram.MainTtelegram(logs)
+	msg := make(chan tgbotapi.Update)
+
+	go telegram.ReceivingMessageTelegram(msg)
+	go telegram.Worker(msg, logs)
+	//	go telegram.MainTtelegram(logs)
 	handleHello := makeHello(logs)
-	http.HandleFunc("/listen", handleHello)
-	http.ListenAndServe(":8282", nil)
+	http.HandleFunc("/gateway/telegram/create/bad", handleHello)
+	http.ListenAndServe(":8181", nil)
 
 }
-
 
 func makeHello(logger chan string) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -51,10 +59,9 @@ func makeHello(logger chan string) func(http.ResponseWriter, *http.Request) {
 		fmt.Println(t.Point)
 		string := fmt.Sprint("id: ", t.Point, "info: ", t.Statistics)
 		select {
-			case 	logger <- string:
+		case logger <- string:
 		default:
 			return
 		}
 	}
 }
-
