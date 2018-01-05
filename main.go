@@ -33,10 +33,8 @@ func init() {
 func main() {
 	logs := make(chan string)
 	msg := make(chan tgbotapi.Update)
-
 	go telegram.ReceivingMessageTelegram(msg)
 	go telegram.Worker(msg, logs)
-	//	go telegram.MainTtelegram(logs)
 	handleHello := makeHello(logs)
 	http.HandleFunc("/gateway/telegram/create/bad", handleHello)
 	http.ListenAndServe(":8181", nil)
@@ -47,7 +45,7 @@ func makeHello(logger chan string) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "all ok	")
 		decoder := json.NewDecoder(r.Body)
-		var t lib.Json
+		var t lib.BadJson
 
 		err := decoder.Decode(&t)
 		if err != nil {
@@ -56,11 +54,14 @@ func makeHello(logger chan string) func(http.ResponseWriter, *http.Request) {
 			log.Println(err)
 			return
 		}
-		fmt.Println(t.Point)
-		string := fmt.Sprint("id: ", t.Point, "info: ", t.Statistics)
+		string := fmt.Sprintf("ip: *%v* json *%v*",t.Ip , t.Json)
+		fmt.Println(string)
 		select {
-		case logger <- string:
+		case <-logger:
+			fmt.Println("отправил")
+			logger <- string
 		default:
+			fmt.Println("Не отправил")
 			return
 		}
 	}

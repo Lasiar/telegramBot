@@ -18,3 +18,8 @@ type Json struct {
 	Point      interface{}     `json:"point"`
 	Statistics [][]interface{} `json:"statistics"`
 }
+
+type BadJson struct {
+	Ip   string
+	Json interface{}
+}
