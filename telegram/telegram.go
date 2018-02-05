@@ -1,12 +1,13 @@
 package telegram
 
 import (
+	"fmt"
 	"gopkg.in/telegram-bot-api.v4"
 	"log"
-	"fmt"
 	"regexp"
 	"strconv"
 	"telega/model"
+	//"net/http"
 )
 
 var Bot *tgbotapi.BotAPI
@@ -25,40 +26,47 @@ func ReceivingMessageTelegram(msg chan tgbotapi.Update) {
 	}
 }
 
-func Worker(msg chan tgbotapi.Update, json chan string) {
+func Worker(update chan tgbotapi.Update, msgFromMachine chan string) {
 	var idListenGoodId []int64
-	idArray := make(chan int64)
-	chan1 := make(chan string)
-	loop:
+	idReturn := make(chan int64)
+	broadcast := make(chan string)
+	msgForListen := make(chan string)
+loop:
 	for {
 		select {
-		case m := <-msg:
+		case u := <-update:
 			for _, id := range idListenGoodId {
-				if m.Message.Chat.ID == id {
-					chan1 <- m.Message.Text
+				if u.Message.Chat.ID == id {
+					msgForListen <- u.Message.Text
 					continue loop
-					}
+				}
 			}
-			v1 := regular(m, json, chan1, idArray)
+			v1 := regular(u, broadcast, msgForListen, idReturn)
 			if v1 != 0 {
 				idListenGoodId = append(idListenGoodId, v1)
 			}
-			case i := <-idArray:
-				fmt.Println("Должен удалить: ", i)
-				idListenGoodId = deleteByValue(i, idListenGoodId)
-				fmt.Println(idListenGoodId)
+
+		case b := <-msgFromMachine:
+			for range idListenGoodId {
+				broadcast <- b
+			}
+
+		case i := <-idReturn:
+			fmt.Println("Должен удалить: ", i)
+			idListenGoodId = deleteByValue(i, idListenGoodId)
+			fmt.Println(idListenGoodId)
 		}
 		fmt.Println(idListenGoodId)
 	}
 }
 
-func regular(update tgbotapi.Update, json chan string, updateChan chan string, idArray chan int64) int64 {
+func regular(update tgbotapi.Update, msgFromMachine chan string, msgForListen chan string, idReturn chan int64) int64 {
 	reply := "Не знаю что ответить"
 	m := update.Message.Text
 	switch {
-	case m == "1":
-		go test(update.Message.Chat.ID,updateChan, json, idArray)
-		return  update.Message.Chat.ID
+	case m == "bad":
+		go sendStatistics(update.Message.Chat.ID, msgForListen, msgFromMachine, idReturn)
+		return update.Message.Chat.ID
 	case m == "list":
 		reply = ""
 		keys, _ := model.List()
@@ -97,27 +105,26 @@ func sendMessage(chatID int64, message string) {
 	Bot.Send(msg)
 }
 
-
-
-func test(chatID int64 ,update chan string, logs chan string, idArray chan int64) {
+func sendStatistics(chatID int64, update chan string, msgFromMachine chan string, idReturn chan int64) {
 	sendMessage(chatID, "Трансляция началась")
+	//	http.Get("")
 	for {
 		select {
 		case u := <-update:
 			switch u {
 			case "exit":
+				idReturn <- chatID
 				sendMessage(chatID, "Выход в обычный режим")
-				idArray  <- chatID
 				return
 			default:
 				sendMessage(chatID, "print exit")
 
 			}
-		case reply := <-logs:
+		case reply := <-msgFromMachine:
 			fmt.Println("Получил сообщение")
 			sendMessage(chatID, reply)
-		case logs <- "ok":
-			continue
+			//case msgFromMachine <- "ok":
+			//	continue
 		}
 	}
 }

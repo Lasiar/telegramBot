@@ -4,15 +4,13 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"gopkg.in/telegram-bot-api.v4"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"telega/lib"
 	"telega/telegram"
-
-	"io/ioutil"
-	//"regexp"
-	"gopkg.in/telegram-bot-api.v4"
 )
 
 func init() {
@@ -31,17 +29,16 @@ func init() {
 }
 
 func main() {
-	logs := make(chan string)
+	msgFromMachine := make(chan string)
 	msg := make(chan tgbotapi.Update)
 	go telegram.ReceivingMessageTelegram(msg)
-	go telegram.Worker(msg, logs)
-	handleHello := makeHello(logs)
-	http.HandleFunc("/gateway/telegram/create/bad", handleHello)
-	http.ListenAndServe(":8181", nil)
-
+	go telegram.Worker(msg, msgFromMachine)
+	handleHello := makeHello(msgFromMachine)
+	http.HandleFunc("/bad", handleHello)
+	http.ListenAndServe(":8282", nil)
 }
 
-func makeHello(logger chan string) func(http.ResponseWriter, *http.Request) {
+func makeHello(messageFromMachine chan string) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "all ok	")
 		decoder := json.NewDecoder(r.Body)
@@ -54,14 +51,11 @@ func makeHello(logger chan string) func(http.ResponseWriter, *http.Request) {
 			log.Println(err)
 			return
 		}
-		string := fmt.Sprintf("ip: *%v* json *%v*",t.Ip , t.Json)
-		fmt.Println(string)
+		msg := fmt.Sprintf("ip: *%v* json *%v*", t.Ip, t.Json)
 		select {
-		case <-logger:
-			fmt.Println("отправил")
-			logger <- string
+		case messageFromMachine <- msg:
+			return
 		default:
-			fmt.Println("Не отправил")
 			return
 		}
 	}
