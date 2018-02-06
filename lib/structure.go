@@ -24,7 +24,19 @@ type BadJson struct {
 	Json interface{}
 }
 
-type GoodRequestStatistic struct{
+type RequestGoodStatistic struct {
 	ChatId int64 `json:"chat_id"`
-	Point  []int	`json:"point"`
+	Point  []int `json:"point"`
+}
+
+type GoodJson struct {
+	Point    int
+	Datetime int64
+	Md5      string
+	Len      int
+}
+
+type MessageChat struct {
+	ChatId int64
+	Message	string
 }

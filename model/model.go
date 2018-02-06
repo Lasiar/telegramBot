@@ -1,6 +1,7 @@
 package model
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -28,6 +29,20 @@ func List() ([]int, error) {
 	}
 	sort.Ints(point.Point)
 	return point.Point, nil
+}
+
+func InitialGoodStatistic(js lib.RequestGoodStatistic) {
+	url := fmt.Sprint("http://127.0.0.1:8181/gateway/telegram/initial-good-point")
+	jsonStr, _ := json.Marshal(js)
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonStr))
+	req.Header.Set("X-Custom-Header", "myvalue")
+	req.Header.Set("Content-Type", "application/json")
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
 }
 
 func InfoPoint(point string) (lib.InfoPointJs, error) {

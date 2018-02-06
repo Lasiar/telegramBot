@@ -11,6 +11,7 @@ import (
 	"os"
 	"telega/lib"
 	"telega/telegram"
+	"telega/web"
 )
 
 func init() {
@@ -31,12 +32,18 @@ func init() {
 func main() {
 	msgFromMachine := make(chan string)
 	msg := make(chan tgbotapi.Update)
+	goodStat := make(chan lib.GoodJson)
+	sendWarning := make(chan lib.MessageChat)
 
 	go telegram.ReceivingMessageTelegram(msg)
-	go telegram.Worker(msg, msgFromMachine)
+	go telegram.Worker(msg, msgFromMachine, goodStat, sendWarning)
 
+	handleSendWarning := web.SendWarning(sendWarning)
+	handleAdmissionStatistic := web.AdmissionStatistic(goodStat)
 	handleHello := recivingBadStatistic(msgFromMachine)
 	http.HandleFunc("/bad", handleHello)
+	http.HandleFunc("/good", handleAdmissionStatistic)
+	http.HandleFunc("/message", handleSendWarning)
 	http.ListenAndServe(":8282", nil)
 }
 
