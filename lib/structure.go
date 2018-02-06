@@ -23,3 +23,8 @@ type BadJson struct {
 	Ip   string
 	Json interface{}
 }
+
+type GoodRequestStatistic struct{
+	ChatId int64 `json:"chat_id"`
+	Point  []int	`json:"point"`
+}

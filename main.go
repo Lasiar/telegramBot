@@ -31,14 +31,16 @@ func init() {
 func main() {
 	msgFromMachine := make(chan string)
 	msg := make(chan tgbotapi.Update)
+
 	go telegram.ReceivingMessageTelegram(msg)
 	go telegram.Worker(msg, msgFromMachine)
-	handleHello := makeHello(msgFromMachine)
+
+	handleHello := recivingBadStatistic(msgFromMachine)
 	http.HandleFunc("/bad", handleHello)
 	http.ListenAndServe(":8282", nil)
 }
 
-func makeHello(messageFromMachine chan string) func(http.ResponseWriter, *http.Request) {
+func recivingBadStatistic(messageFromMachine chan string) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "all ok	")
 		decoder := json.NewDecoder(r.Body)

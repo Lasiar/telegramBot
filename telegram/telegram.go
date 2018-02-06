@@ -8,11 +8,15 @@ import (
 	"strconv"
 	"telega/model"
 	//"net/http"
+	"telega/lib"
 )
 
 var Bot *tgbotapi.BotAPI
+var idInfo = regexp.MustCompile(`\d`)
+var idListen = regexp.MustCompile(`listen \d`)
 
-var id = regexp.MustCompile(`\d`)
+
+
 
 func ReceivingMessageTelegram(msg chan tgbotapi.Update) {
 	u := tgbotapi.NewUpdate(0)
@@ -28,7 +32,7 @@ func ReceivingMessageTelegram(msg chan tgbotapi.Update) {
 
 func Worker(update chan tgbotapi.Update, msgFromMachine chan string) {
 	var idListenGoodId []int64
-	idReturn := make(chan int64)
+	chatIdReturn := make(chan int64)
 	broadcast := make(chan string)
 	msgForListen := make(chan string)
 loop:
@@ -41,22 +45,18 @@ loop:
 					continue loop
 				}
 			}
-			v1 := regular(u, broadcast, msgForListen, idReturn)
+			v1 := regular(u, broadcast, msgForListen, chatIdReturn)
 			if v1 != 0 {
 				idListenGoodId = append(idListenGoodId, v1)
 			}
-
 		case b := <-msgFromMachine:
 			for range idListenGoodId {
 				broadcast <- b
 			}
-
-		case i := <-idReturn:
-			fmt.Println("Должен удалить: ", i)
+		case i := <-chatIdReturn:
 			idListenGoodId = deleteByValue(i, idListenGoodId)
 			fmt.Println(idListenGoodId)
 		}
-		fmt.Println(idListenGoodId)
 	}
 }
 
@@ -64,8 +64,23 @@ func regular(update tgbotapi.Update, msgFromMachine chan string, msgForListen ch
 	reply := "Не знаю что ответить"
 	m := update.Message.Text
 	switch {
+	case idListen.MatchString(m):
+			var js lib.GoodRequestStatistic
+			js.ChatId=update.Message.Chat.ID
+
+			//FIXME нужно сделать чтобы не только для одного айди было
+			id := m[7:]
+			fmt.Println(id)
+			v1, err := strconv.Atoi(id)
+			if err != nil {
+				reply = fmt.Sprint(err)
+				break
+			}
+			js.Point = append(js.Point, v1)
+
+		reply = fmt.Sprint(js)
 	case m == "bad":
-		go sendStatistics(update.Message.Chat.ID, msgForListen, msgFromMachine, idReturn)
+		go consumerBadStatistics(update.Message.Chat.ID, msgForListen, msgFromMachine, idReturn)
 		return update.Message.Chat.ID
 	case m == "list":
 		reply = ""
@@ -87,7 +102,7 @@ func regular(update tgbotapi.Update, msgFromMachine chan string, msgForListen ch
 		for _, key := range keys {
 			reply = reply + fmt.Sprint(key, "\n")
 		}
-	case id.MatchString(m):
+	case idInfo.MatchString(m):
 		infoPoint, _ := model.InfoPoint(m)
 		if infoPoint.Success {
 			reply = fmt.Sprintf("ip: *%v*; user info: *%v*", infoPoint.Ip, infoPoint.UserAgent)
@@ -105,9 +120,8 @@ func sendMessage(chatID int64, message string) {
 	Bot.Send(msg)
 }
 
-func sendStatistics(chatID int64, update chan string, msgFromMachine chan string, idReturn chan int64) {
-	sendMessage(chatID, "Трансляция началась")
-	//	http.Get("")
+func consumerBadStatistics(chatID int64, update chan string, msgFromMachine chan string, idReturn chan int64) {
+	sendMessage(chatID, "Трансляция началась \n для выхода напишите: *exit*")
 	for {
 		select {
 		case u := <-update:
@@ -117,14 +131,11 @@ func sendStatistics(chatID int64, update chan string, msgFromMachine chan string
 				sendMessage(chatID, "Выход в обычный режим")
 				return
 			default:
-				sendMessage(chatID, "print exit")
+				sendMessage(chatID, "Для выхода напишите exit")
 
 			}
 		case reply := <-msgFromMachine:
-			fmt.Println("Получил сообщение")
 			sendMessage(chatID, reply)
-			//case msgFromMachine <- "ok":
-			//	continue
 		}
 	}
 }
