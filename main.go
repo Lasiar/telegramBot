@@ -41,6 +41,7 @@ func main() {
 	handleSendWarning := web.SendWarning(sendWarning)
 	handleAdmissionStatistic := web.AdmissionStatistic(goodStat)
 	handleHello := recivingBadStatistic(msgFromMachine)
+
 	http.HandleFunc("/bad", handleHello)
 	http.HandleFunc("/good", handleAdmissionStatistic)
 	http.HandleFunc("/message", handleSendWarning)

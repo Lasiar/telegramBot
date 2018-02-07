@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"telega/lib"
+	"strconv"
 )
 
 func AdmissionStatistic(goodStat chan lib.GoodJson) func(http.ResponseWriter, *http.Request) {
@@ -35,13 +36,14 @@ func SendWarning(message chan lib.MessageChat) func(http.ResponseWriter, *http.R
 	return func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "all ok	")
 		var t lib.MessageChat
-		msg	:= r.FormValue("message")
-		if msg == "" {
+		t.Message = r.FormValue("message")
+		if t.Message == "" {
 			fmt.Println("msg empty")
 			return
 		}
-		t.Message=msg
-		fmt.Println(msg)
+		intString := r.FormValue("chat-id")
+		i, _ := strconv.Atoi(intString)
+		t.ChatId = int64(i)
 		message <- t
 	}
 	}

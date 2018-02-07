@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"telega/model"
 	"telega/lib"
+	"telega/system"
 )
 
 var Bot *tgbotapi.BotAPI
@@ -40,8 +41,7 @@ loop:
 	for {
 		select {
 		case u := <- sendWarning:
-			fmt.Println("Отправил мне")
-			sendMessage(379572314, u.Message)
+			system.SendMessageWithoutParse(u.ChatId, u.Message)
 		case u := <-update:
 			for _, id := range idListenBadId {
 				if u.Message.Chat.ID == id {
@@ -76,10 +76,10 @@ loop:
 				broadcastBad <- b
 			}
 		case i := <-chatIdBadReturn:
-			idListenBadId = deleteByValue(i, idListenBadId)
+			idListenBadId = system.DeleteByValue(i, idListenBadId)
 			fmt.Println(idListenBadId)
 		case i := <-chatIdGoodReturn:
-			idListenBadId = deleteByValue(i, idListenBadId)
+			idListenBadId = system.DeleteByValue(i, idListenBadId)
 		}
 	}
 }
@@ -133,69 +133,46 @@ func regular(update tgbotapi.Update, msgFromMachine chan string, msgForListen ch
 			reply = "такой машины нет"
 		}
 	}
-	sendMessage(update.Message.Chat.ID, reply)
+	system.SendMessage(update.Message.Chat.ID, reply)
 	return 0, 0
 }
 
-func sendMessage(chatID int64, message string) {
-	msg := tgbotapi.NewMessage(chatID, message)
-	msg.ParseMode = "markdown"
-	_, err := Bot.Send(msg)
-	if err != nil {
-		msg := tgbotapi.NewMessage(chatID, message)
-		_, err := Bot.Send(msg)
-		if err != nil {
-			fmt.Println(err, msg)
-		}
-	}
-}
-
 func consumerBadStatistics(chatID int64, update chan string, msgFromMachine chan string, idReturn chan int64) {
-	sendMessage(chatID, "Трансляция началась \n для выхода напишите: *exit*")
+	system.SendMessage(chatID, "Трансляция началась \n для выхода напишите: *exit*")
 	for {
 		select {
 		case u := <-update:
 			switch u {
 			case "exit":
 				idReturn <- chatID
-				sendMessage(chatID, "Выход в обычный режим")
+				system.SendMessage(chatID, "Выход в обычный режим")
 				return
 			default:
-				sendMessage(chatID, "Для выхода напишите exit")
+				system.SendMessage(chatID, "Для выхода напишите exit")
 
 			}
 		case reply := <-msgFromMachine:
-			sendMessage(chatID, reply)
+			system.SendMessage(chatID, reply)
 		}
 	}
 }
 
 func consumerGoodStatistics(chatID int64, update chan string, goodJson chan lib.GoodJson, idReturn chan int64) {
-	sendMessage(chatID, "Трансляция началась \n для выхода напишите: *exit*")
+	system.SendMessage(chatID, "Трансляция началась \n для выхода напишите: *exit*")
 	for {
 		select {
 		case u := <-update:
 			switch u {
 			case "exit":
 				idReturn <- chatID
-				sendMessage(chatID, "Выход в обычный режим")
+				system.SendMessage(chatID, "Выход в обычный режим")
 				return
 			default:
-				sendMessage(chatID, "Для выхода напишите exit")
+				system.SendMessage(chatID, "Для выхода напишите exit")
 
 			}
 		case reply := <-goodJson:
-			sendMessage(chatID, fmt.Sprint(reply))
+			system.SendMessage(chatID, fmt.Sprint(reply))
 		}
 	}
-}
-
-func deleteByValue(value int64, array []int64) []int64 {
-	var arrayReturn []int64
-	for _, a := range array {
-		if value != a {
-			arrayReturn = append(arrayReturn, a)
-		}
-	}
-	return arrayReturn
 }
