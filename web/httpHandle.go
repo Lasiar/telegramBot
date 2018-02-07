@@ -36,7 +36,12 @@ func SendWarning(message chan lib.MessageChat) func(http.ResponseWriter, *http.R
 		fmt.Fprint(w, "all ok	")
 		var t lib.MessageChat
 		msg	:= r.FormValue("message")
+		if msg == "" {
+			fmt.Println("msg empty")
+			return
+		}
 		t.Message=msg
-		message <-t
+		fmt.Println(msg)
+		message <- t
 	}
 	}

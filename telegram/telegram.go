@@ -40,6 +40,7 @@ loop:
 	for {
 		select {
 		case u := <- sendWarning:
+			fmt.Println("Отправил мне")
 			sendMessage(379572314, u.Message)
 		case u := <-update:
 			for _, id := range idListenBadId {
@@ -139,7 +140,14 @@ func regular(update tgbotapi.Update, msgFromMachine chan string, msgForListen ch
 func sendMessage(chatID int64, message string) {
 	msg := tgbotapi.NewMessage(chatID, message)
 	msg.ParseMode = "markdown"
-	Bot.Send(msg)
+	_, err := Bot.Send(msg)
+	if err != nil {
+		msg := tgbotapi.NewMessage(chatID, message)
+		_, err := Bot.Send(msg)
+		if err != nil {
+			fmt.Println(err, msg)
+		}
+	}
 }
 
 func consumerBadStatistics(chatID int64, update chan string, msgFromMachine chan string, idReturn chan int64) {
