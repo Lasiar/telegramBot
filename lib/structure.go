@@ -37,6 +37,6 @@ type GoodJson struct {
 }
 
 type MessageChat struct {
-	ChatId int64
-	Message	string
+	ChatId  int64
+	Message string
 }

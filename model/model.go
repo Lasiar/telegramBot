@@ -22,7 +22,6 @@ func List() ([]int, error) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(pointArr)
 	err = json.Unmarshal([]byte(pointArr), &point)
 	if err != nil {
 		return nil, fmt.Errorf("error unmarshal %v", err)
@@ -97,6 +96,5 @@ func CountToDayQuery() ([]int, error) {
 	if err != nil {
 		return pointToDayCount.Point, fmt.Errorf("error unmarsha %v", err)
 	}
-	fmt.Println(pointToDayCount)
 	return pointToDayCount.Point, nil
 }

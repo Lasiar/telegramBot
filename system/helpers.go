@@ -2,17 +2,18 @@ package system
 
 import (
 	"gopkg.in/telegram-bot-api.v4"
+	"log"
 	"telega/lib"
 )
 
 func SendMessage(chatID int64, message string) {
+	log.Printf("[chat Bot] %s", message)
 	err := SendMessageParse(chatID, message)
 	if err == nil {
 		return
 	} else {
 		SendMessageWithoutParse(chatID, message)
 	}
-
 
 }
 func SendMessageParse(chatID int64, message string) error {

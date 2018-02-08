@@ -6,8 +6,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"telega/lib"
 	"strconv"
+	"telega/lib"
 )
 
 func AdmissionStatistic(goodStat chan lib.GoodJson) func(http.ResponseWriter, *http.Request) {
@@ -46,4 +46,4 @@ func SendWarning(message chan lib.MessageChat) func(http.ResponseWriter, *http.R
 		t.ChatId = int64(i)
 		message <- t
 	}
-	}
+}

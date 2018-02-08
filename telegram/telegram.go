@@ -6,13 +6,12 @@ import (
 	"log"
 	"regexp"
 	"strconv"
-	"telega/model"
 	"telega/lib"
+	"telega/model"
 	"telega/system"
 )
 
 var idInfo = regexp.MustCompile(`\d`)
-var idListen = regexp.MustCompile(`listen \d`)
 
 func ReceivingMessageTelegram(msg chan tgbotapi.Update) {
 	u := tgbotapi.NewUpdate(0)
@@ -39,9 +38,15 @@ func Worker(update chan tgbotapi.Update, msgFromMachine chan string, goodJson ch
 loop:
 	for {
 		select {
-		case u := <- sendWarning:
+		case u := <-sendWarning:
 			system.SendMessageWithoutParse(u.ChatId, u.Message)
 		case u := <-update:
+			if u.Message.From.UserName != "" {
+				log.Printf("[%s] %s", u.Message.From.UserName, u.Message.Text)
+			} else {
+				log.Printf("[%s %s] %s", u.Message.From.FirstName, u.Message.From.LastName, u.Message.Text)
+
+			}
 			for _, id := range idListenBadId {
 				if u.Message.Chat.ID == id {
 					msgForBadListen <- u.Message.Text
@@ -57,7 +62,7 @@ loop:
 					continue loop
 				}
 			}
-			v1, v2 := regular(u, broadcastBad, msgForBadListen, chatIdBadReturn, chatIdGoodReturn, broadcastGood,msgForGoodListen)
+			v1, v2 := regular(u, broadcastBad, msgForBadListen, chatIdBadReturn, chatIdGoodReturn, broadcastGood, msgForGoodListen)
 			if v1 != 0 {
 				idListenBadId = append(idListenBadId, v1)
 			}
@@ -76,11 +81,9 @@ loop:
 			}
 		case i := <-chatIdBadReturn:
 			idListenBadId = system.DeleteByValue(i, idListenBadId)
-			fmt.Println(idListenBadId)
 		case idGoodReturn := <-chatIdGoodReturn:
 			fmt.Println(idGoodReturn)
 			idListenGooodId = system.DeleteByValue(idGoodReturn, idListenGooodId)
-			fmt.Println(idListenGooodId)
 		}
 	}
 }
@@ -105,7 +108,7 @@ func regular(update tgbotapi.Update, msgFromMachine chan string, msgForListen ch
 		js.Point = append(js.Point, v1)
 		model.InitialGoodStatistic(js)
 		go consumerGoodStatistics(update.Message.Chat.ID, msgForGoodListen, goodJson, idBadReturn)
-		return  0, update.Message.Chat.ID
+		return 0, update.Message.Chat.ID
 	case m.Command() == "bad":
 		go consumerBadStatistics(update.Message.Chat.ID, msgForListen, msgFromMachine, idGoodReturn)
 		return update.Message.Chat.ID, 0
@@ -137,6 +140,7 @@ func regular(update tgbotapi.Update, msgFromMachine chan string, msgForListen ch
 			reply = "такой машины нет"
 		}
 	}
+
 	system.SendMessage(update.Message.Chat.ID, reply)
 	return 0, 0
 }
@@ -153,7 +157,6 @@ func consumerBadStatistics(chatID int64, update chan string, msgFromMachine chan
 				return
 			default:
 				system.SendMessage(chatID, "Для выхода напишите exit")
-
 			}
 		case reply := <-msgFromMachine:
 			system.SendMessage(chatID, reply)
