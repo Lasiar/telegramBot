@@ -22,11 +22,11 @@ func init() {
 		log.Print("-telegrambottoken is required")
 		os.Exit(1)
 	}
-	telegram.Bot, err = tgbotapi.NewBotAPI(lib.TelegramBotToken)
+	lib.Bot, err = tgbotapi.NewBotAPI(lib.TelegramBotToken)
 	if err != nil {
 		log.Panic("ошибка подключения бота", err)
 	}
-	log.Println("Connect", telegram.Bot.Self.UserName)
+	log.Println("Connect", lib.Bot.Self.UserName)
 }
 
 func main() {

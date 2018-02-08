@@ -11,14 +11,13 @@ import (
 	"telega/system"
 )
 
-var Bot *tgbotapi.BotAPI
 var idInfo = regexp.MustCompile(`\d`)
 var idListen = regexp.MustCompile(`listen \d`)
 
 func ReceivingMessageTelegram(msg chan tgbotapi.Update) {
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
-	updates, err := Bot.GetUpdatesChan(u)
+	updates, err := lib.Bot.GetUpdatesChan(u)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -78,21 +77,26 @@ loop:
 		case i := <-chatIdBadReturn:
 			idListenBadId = system.DeleteByValue(i, idListenBadId)
 			fmt.Println(idListenBadId)
-		case i := <-chatIdGoodReturn:
-			idListenBadId = system.DeleteByValue(i, idListenBadId)
+		case idGoodReturn := <-chatIdGoodReturn:
+			fmt.Println(idGoodReturn)
+			idListenGooodId = system.DeleteByValue(idGoodReturn, idListenGooodId)
+			fmt.Println(idListenGooodId)
 		}
 	}
 }
 
 func regular(update tgbotapi.Update, msgFromMachine chan string, msgForListen chan string, idGoodReturn chan int64, idBadReturn chan int64, goodJson chan lib.GoodJson, msgForGoodListen chan string) (int64, int64) {
 	reply := "Не знаю что ответить"
-	m := update.Message.Text
+	m := update.Message
 	switch {
-	case idListen.MatchString(m):
+	case m.Command() == "listen":
 		var js lib.RequestGoodStatistic
-		js.ChatId = update.Message.Chat.ID
-		//FIXME нужно сделать чтобы не только для одного айди было
-		id := m[7:]
+		if m.CommandArguments() == "" {
+			reply = "Введите после команды id-машины"
+			break
+		}
+		js.ChatId = m.Chat.ID
+		id := m.CommandArguments()
 		v1, err := strconv.Atoi(id)
 		if err != nil {
 			reply = fmt.Sprint(err)
@@ -102,16 +106,16 @@ func regular(update tgbotapi.Update, msgFromMachine chan string, msgForListen ch
 		model.InitialGoodStatistic(js)
 		go consumerGoodStatistics(update.Message.Chat.ID, msgForGoodListen, goodJson, idBadReturn)
 		return  0, update.Message.Chat.ID
-	case m == "bad":
+	case m.Command() == "bad":
 		go consumerBadStatistics(update.Message.Chat.ID, msgForListen, msgFromMachine, idGoodReturn)
 		return update.Message.Chat.ID, 0
-	case m == "list":
+	case m.Command() == "list":
 		reply = ""
 		keys, _ := model.List()
 		for _, key := range keys {
 			reply = reply + fmt.Sprint(key, "; ")
 		}
-	case m == "count":
+	case m.Command() == "count":
 		count, err := model.CountAllQuery()
 		if err != nil {
 			log.Println(err)
@@ -119,14 +123,14 @@ func regular(update tgbotapi.Update, msgFromMachine chan string, msgForListen ch
 			break
 		}
 		reply = strconv.Itoa(count)
-	case m == "point today":
+	case m.Command() == "point_today":
 		reply = ""
 		keys, _ := model.CountToDayQuery()
 		for _, key := range keys {
 			reply = reply + fmt.Sprint(key, "\n")
 		}
-	case idInfo.MatchString(m):
-		infoPoint, _ := model.InfoPoint(m)
+	case idInfo.MatchString(m.Command()):
+		infoPoint, _ := model.InfoPoint(m.Command())
 		if infoPoint.Success {
 			reply = fmt.Sprintf("ip: *%v*; user info: *%v*", infoPoint.Ip, infoPoint.UserAgent)
 		} else {

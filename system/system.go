@@ -1,5 +1,7 @@
 package system
 
+import "fmt"
+
 func DeleteByValue(value int64, array []int64) []int64 {
 	var arrayReturn []int64
 	for _, a := range array {
@@ -7,5 +9,6 @@ func DeleteByValue(value int64, array []int64) []int64 {
 			arrayReturn = append(arrayReturn, a)
 		}
 	}
+	fmt.Println(arrayReturn, "НЕ УДАЛИЛ")
 	return arrayReturn
 }
